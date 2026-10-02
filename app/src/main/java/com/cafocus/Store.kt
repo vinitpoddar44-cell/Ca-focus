@@ -10,4 +10,6 @@ object Store {
     fun setEmergency(c: Context, n: String) = p(c).edit().putString("emg", n).apply()
     fun endAt(c: Context): Long = p(c).getLong("end", 0L)
     fun setEndAt(c: Context, t: Long) = p(c).edit().putLong("end", t).apply()
+    fun total(c: Context): Long = p(c).getLong("total", 0L)
+    fun setTotal(c: Context, t: Long) = p(c).edit().putLong("total", t).apply()
 }
