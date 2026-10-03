@@ -16,6 +16,7 @@ class BlockActivity : Activity() {
     private fun build() {
         window.statusBarColor = C.BG
         val mins = ((Store.endAt(this) - System.currentTimeMillis()) / 60000 + 1).coerceAtLeast(0)
+        val subject = Store.subject(this)
         val l = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
@@ -24,6 +25,10 @@ class BlockActivity : Activity() {
         }
         l.addView(tv("🔒", 48f).apply { gravity = Gravity.CENTER })
         l.addView(tv("This app is blocked", 26f, true).apply { gravity = Gravity.CENTER })
+        if (subject.isNotEmpty()) l.addView(tv("Studying: $subject", 14f, color = C.MUT).apply {
+            gravity = Gravity.CENTER
+            setPadding(0, dp(6), 0, 0)
+        })
         l.addView(tv("Focus ends in $mins min. You can do this.", 15f, color = C.MUT).apply {
             gravity = Gravity.CENTER
             setPadding(0, dp(6), 0, dp(18))
