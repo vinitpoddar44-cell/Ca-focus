@@ -7,6 +7,7 @@ import android.graphics.Paint
 import android.graphics.RectF
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.view.Gravity
 import android.view.View
 import android.widget.Button
 import android.widget.LinearLayout
@@ -66,11 +67,58 @@ fun Context.stylePill(t: TextView, on: Boolean) {
 fun Context.pill(t: String, on: Boolean, f: () -> Unit): TextView = TextView(this).apply {
     text = t
     textSize = 14f
-    gravity = android.view.Gravity.CENTER
+    gravity = Gravity.CENTER
     setPadding(0, dp(10), 0, dp(10))
     layoutParams = LinearLayout.LayoutParams(0, WC, 1f).apply { rightMargin = dp(8) }
     stylePill(this, on)
     setOnClickListener { f() }
+}
+
+fun Context.tag(t: String): TextView = TextView(this).apply {
+    text = t
+    textSize = 13f
+    setTextColor(Color.WHITE)
+    background = shape(C.INK, 20)
+    setPadding(dp(14), dp(7), dp(14), dp(7))
+    layoutParams = LinearLayout.LayoutParams(WC, WC).apply { bottomMargin = dp(8) }
+}
+
+fun Context.iconBtn(sym: String, f: () -> Unit): TextView = TextView(this).apply {
+    text = sym
+    textSize = 20f
+    gravity = Gravity.CENTER
+    setTextColor(C.INK)
+    background = shape(C.CARD, 21, C.LINE)
+    layoutParams = LinearLayout.LayoutParams(dp(42), dp(42))
+    setOnClickListener { f() }
+}
+
+fun Context.topBar(title: String, back: (() -> Unit)?, gear: (() -> Unit)?): LinearLayout {
+    val bar = LinearLayout(this)
+    bar.gravity = Gravity.CENTER_VERTICAL
+    bar.setPadding(0, 0, 0, dp(16))
+    if (back != null) bar.addView(iconBtn("←", back))
+    val t = tv(title, if (back == null) 28f else 20f, true)
+    t.setPadding(if (back == null) 0 else dp(12), 0, 0, 0)
+    bar.addView(t, LinearLayout.LayoutParams(0, WC, 1f))
+    if (gear != null) bar.addView(iconBtn("⚙", gear))
+    return bar
+}
+
+fun Context.option(title: String, sub: String?, f: () -> Unit): LinearLayout {
+    val row = LinearLayout(this)
+    row.gravity = Gravity.CENTER_VERTICAL
+    row.background = shape(C.CARD, 12, C.LINE)
+    row.setPadding(dp(16), dp(16), dp(16), dp(16))
+    row.layoutParams = LinearLayout.LayoutParams(MP, WC).apply { bottomMargin = dp(10) }
+    row.setOnClickListener { f() }
+    val col = LinearLayout(this)
+    col.orientation = LinearLayout.VERTICAL
+    col.addView(tv(title, 17f, true))
+    if (sub != null) col.addView(tv(sub, 13f, color = C.MUT))
+    row.addView(col, LinearLayout.LayoutParams(0, WC, 1f))
+    row.addView(tv("›", 26f, color = C.MUT))
+    return row
 }
 
 class RingView(c: Context) : View(c) {
