@@ -2,48 +2,465 @@ package com.cafocus
 
 import android.app.Activity
 import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
 import android.view.Gravity
 import android.widget.LinearLayout
+import android.widget.ScrollView
 
 class BlockActivity : Activity() {
-    override fun onCreate(b: Bundle?) { super.onCreate(b); build() }
-    override fun onNewIntent(i: Intent?) { super.onNewIntent(i); build() }
-    @Deprecated("Deprecated in Java")
-    override fun onBackPressed() = home()
 
-    private fun build() {
+    // ---------------------------------------------------------
+    // ACTIVITY CREATED
+    // ---------------------------------------------------------
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
         window.statusBarColor = C.BG
-        val mins = ((Store.endAt(this) - System.currentTimeMillis()) / 60000 + 1).coerceAtLeast(0)
-        val subject = Store.subject(this)
-        val l = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER
-            setBackgroundColor(C.BG)
-            setPadding(dp(28), dp(28), dp(28), dp(28))
-        }
-        l.addView(tv("🔒", 48f).apply { gravity = Gravity.CENTER })
-        l.addView(tv("This app is blocked", 26f, true).apply { gravity = Gravity.CENTER })
-        if (subject.isNotEmpty()) l.addView(tv("Studying: $subject", 14f, color = C.MUT).apply {
-            gravity = Gravity.CENTER
-            setPadding(0, dp(6), 0, 0)
-        })
-        l.addView(tv("Focus ends in $mins min. You can do this.", 15f, color = C.MUT).apply {
-            gravity = Gravity.CENTER
-            setPadding(0, dp(6), 0, dp(18))
-        })
-        l.addView(button("Back to study", C.INK) { home() })
-        val n = Store.emergency(this).filter { it.isDigit() || it == '+' }
-        if (n.isNotEmpty()) l.addView(button("Call emergency contact", C.RED) {
-            startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:$n")))
-        })
-        l.addView(button("Open Phone", C.INK, outline = true) { startActivity(Intent(Intent.ACTION_DIAL)) })
-        setContentView(l)
+        window.navigationBarColor = C.BG
+
+        buildScreen()
     }
 
-    private fun home() {
-        startActivity(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+    // ---------------------------------------------------------
+    // ACTIVITY RECEIVES NEW INTENT
+    // ---------------------------------------------------------
+
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+
+        setIntent(intent)
+
+        buildScreen()
+    }
+
+    // ---------------------------------------------------------
+    // BACK BUTTON
+    // ---------------------------------------------------------
+
+    @Deprecated("Deprecated in Java")
+    override fun onBackPressed() {
+        goHome()
+    }
+
+    // ---------------------------------------------------------
+    // DIRECT CALL PERMISSION RESULT
+    // ---------------------------------------------------------
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+
+        super.onRequestPermissionsResult(
+            requestCode,
+            permissions,
+            grantResults
+        )
+
+        /*
+         * callNow() and onCallPermission() are defined in Ui.kt.
+         *
+         * If the student grants CALL_PHONE permission,
+         * the pending emergency number is called automatically.
+         */
+        onCallPermission(
+            requestCode,
+            grantResults
+        )
+    }
+
+    // ---------------------------------------------------------
+    // BUILD BLOCK SCREEN
+    // ---------------------------------------------------------
+
+    private fun buildScreen() {
+
+        val remainingMillis =
+            Store.endAt(this) -
+                    System.currentTimeMillis()
+
+        val remainingMinutes =
+            if (remainingMillis > 0) {
+                ((remainingMillis + 59_999L) / 60_000L)
+                    .coerceAtLeast(0L)
+            } else {
+                0L
+            }
+
+        val remainingSeconds =
+            if (remainingMillis > 0) {
+                ((remainingMillis + 999L) / 1_000L)
+                    .coerceAtLeast(0L)
+            } else {
+                0L
+            }
+
+        val subject =
+            Store.subject(this)
+
+        val contacts =
+            Store.contacts(this)
+
+        // -----------------------------------------------------
+        // MAIN CONTENT
+        // -----------------------------------------------------
+
+        val content = LinearLayout(this).apply {
+
+            orientation = LinearLayout.VERTICAL
+
+            gravity = Gravity.CENTER_HORIZONTAL
+
+            setBackgroundColor(C.BG)
+
+            setPadding(
+                dp(28),
+                dp(40),
+                dp(28),
+                dp(40)
+            )
+        }
+
+        // -----------------------------------------------------
+        // LOCK ICON
+        // -----------------------------------------------------
+
+        content.addView(
+            tv(
+                "🔒",
+                54f
+            ).apply {
+                gravity = Gravity.CENTER
+
+                setPadding(
+                    0,
+                    0,
+                    0,
+                    dp(10)
+                )
+            }
+        )
+
+        // -----------------------------------------------------
+        // TITLE
+        // -----------------------------------------------------
+
+        content.addView(
+            tv(
+                "This app is blocked",
+                27f,
+                true
+            ).apply {
+                gravity = Gravity.CENTER
+            }
+        )
+
+        // -----------------------------------------------------
+        // SUBJECT
+        // -----------------------------------------------------
+
+        if (subject.isNotBlank()) {
+
+            content.addView(
+                tv(
+                    "Currently studying",
+                    13f,
+                    color = C.MUT
+                ).apply {
+
+                    gravity = Gravity.CENTER
+
+                    setPadding(
+                        0,
+                        dp(18),
+                        0,
+                        dp(3)
+                    )
+                }
+            )
+
+            content.addView(
+                tv(
+                    subject,
+                    17f,
+                    true
+                ).apply {
+
+                    gravity = Gravity.CENTER
+
+                    setPadding(
+                        0,
+                        0,
+                        0,
+                        dp(10)
+                    )
+                }
+            )
+        }
+
+        // -----------------------------------------------------
+        // REMAINING TIME
+        // -----------------------------------------------------
+
+        val timeText =
+            if (remainingSeconds >= 60) {
+
+                val hours =
+                    remainingSeconds / 3600
+
+                val minutes =
+                    (remainingSeconds % 3600) / 60
+
+                val seconds =
+                    remainingSeconds % 60
+
+                if (hours > 0) {
+                    String.format(
+                        "%02d:%02d:%02d",
+                        hours,
+                        minutes,
+                        seconds
+                    )
+                } else {
+                    String.format(
+                        "%02d:%02d",
+                        minutes,
+                        seconds
+                    )
+                }
+
+            } else {
+
+                String.format(
+                    "00:%02d",
+                    remainingSeconds
+                )
+            }
+
+        content.addView(
+            tv(
+                timeText,
+                38f,
+                true
+            ).apply {
+
+                gravity = Gravity.CENTER
+
+                setPadding(
+                    0,
+                    dp(10),
+                    0,
+                    dp(3)
+                )
+            }
+        )
+
+        content.addView(
+            tv(
+                if (remainingMinutes > 0) {
+                    "Focus session is running"
+                } else {
+                    "Focus session is finishing"
+                },
+                14f,
+                color = C.MUT
+            ).apply {
+
+                gravity = Gravity.CENTER
+
+                setPadding(
+                    0,
+                    0,
+                    0,
+                    dp(20)
+                )
+            }
+        )
+
+        // -----------------------------------------------------
+        // BACK TO STUDY BUTTON
+        // -----------------------------------------------------
+
+        content.addView(
+            button(
+                "Back to study",
+                C.INK
+            ) {
+                goHome()
+            }
+        )
+
+        // -----------------------------------------------------
+        // EMERGENCY CONTACT SECTION
+        // -----------------------------------------------------
+
+        if (contacts.isNotEmpty()) {
+
+            content.addView(
+                tv(
+                    "Emergency contacts",
+                    17f,
+                    true
+                ).apply {
+
+                    gravity = Gravity.CENTER
+
+                    setPadding(
+                        0,
+                        dp(22),
+                        0,
+                        dp(4)
+                    )
+                }
+            )
+
+            content.addView(
+                tv(
+                    "Need help? Call a saved emergency contact directly.",
+                    13f,
+                    color = C.MUT
+                ).apply {
+
+                    gravity = Gravity.CENTER
+
+                    setPadding(
+                        0,
+                        0,
+                        0,
+                        dp(6)
+                    )
+                }
+            )
+
+            contacts.forEach { contact ->
+
+                val name =
+                    contact.first
+
+                val number =
+                    contact.second
+
+                content.addView(
+                    button(
+                        "Call $name",
+                        C.RED
+                    ) {
+                        /*
+                         * This uses ACTION_CALL through
+                         * callNow(), so there is no dialler
+                         * confirmation screen after permission
+                         * has been granted.
+                         */
+                        callNow(number)
+                    }
+                )
+            }
+        } else {
+
+            // -------------------------------------------------
+            // NO CONTACTS
+            // -------------------------------------------------
+
+            content.addView(
+                tv(
+                    "No emergency contacts have been added.",
+                    13f,
+                    color = C.MUT
+                ).apply {
+
+                    gravity = Gravity.CENTER
+
+                    setPadding(
+                        0,
+                        dp(18),
+                        0,
+                        0
+                    )
+                }
+            )
+        }
+
+        // -----------------------------------------------------
+        // HOME / PHONE BUTTON
+        // -----------------------------------------------------
+
+        content.addView(
+            button(
+                "Open Phone",
+                C.INK,
+                outline = true
+            ) {
+
+                /*
+                 * This opens the phone application.
+                 * Emergency contact buttons above use
+                 * direct calling instead.
+                 */
+                try {
+
+                    startActivity(
+                        Intent(
+                            Intent.ACTION_DIAL
+                        )
+                    )
+
+                } catch (e: Exception) {
+                    // Ignore if the device has no dialer.
+                }
+            }
+        )
+
+        // -----------------------------------------------------
+        // SCROLL VIEW
+        // -----------------------------------------------------
+
+        val scroll =
+            ScrollView(this).apply {
+
+                isFillViewport = true
+
+                setBackgroundColor(C.BG)
+
+                addView(content)
+            }
+
+        setContentView(scroll)
+    }
+
+    // ---------------------------------------------------------
+    // RETURN TO HOME SCREEN
+    // ---------------------------------------------------------
+
+    private fun goHome() {
+
+        /*
+         * The blocked app should not remain visible.
+         * We send the student to the Android home screen.
+         */
+        try {
+
+            val intent =
+                Intent(
+                    Intent.ACTION_MAIN
+                ).apply {
+
+                    addCategory(
+                        Intent.CATEGORY_HOME
+                    )
+
+                    addFlags(
+                        Intent.FLAG_ACTIVITY_NEW_TASK
+                    )
+                }
+
+            startActivity(intent)
+
+        } catch (e: Exception) {
+            // Ignore.
+        }
+
         finish()
     }
 }
