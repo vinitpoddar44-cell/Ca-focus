@@ -12,4 +12,6 @@ object Store {
     fun setEndAt(c: Context, t: Long) = p(c).edit().putLong("end", t).apply()
     fun total(c: Context): Long = p(c).getLong("total", 0L)
     fun setTotal(c: Context, t: Long) = p(c).edit().putLong("total", t).apply()
+    fun subject(c: Context): String = p(c).getString("subject", "") ?: ""
+    fun setSubject(c: Context, s: String) = p(c).edit().putString("subject", s).apply()
 }
